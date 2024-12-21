@@ -68,7 +68,7 @@ def lambda_handler(event, context):
             token_decimals = int(token.get('decimals')) if token.get('decimals') else None
             token_address, token_contract = token_address.split('.')
             if not token_address:
-                log.error(f"No token_address for {token['slug']}")
+                log.warning(f"No token_address for {token['slug']}")
                 continue
 
             supply = get_total_supply(token_address, token_contract, token_decimals, function_name, stacks_rpc_url)

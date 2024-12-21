@@ -54,7 +54,7 @@ def lambda_handler(event, context):
         try:
             token_address = token.get('address')
             if not token_address:
-                log.error(f"No token_address for {token['slug']}")
+                log.warning(f"No token_address for {token['slug']}")
                 continue
 
             supply = get_circulating_rbtc(token_address, rootstock_rpc_url)

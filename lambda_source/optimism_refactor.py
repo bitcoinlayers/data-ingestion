@@ -93,11 +93,11 @@ def lambda_handler(event, context):
             token_address = token.get('address')
             token_decimals = int(token.get('decimals')) if token.get('decimals') else None
             if not token_address:
-                log.error(f"No token_address for {token['slug']}")
+                log.warning(f"No token_address for {token['slug']}")
                 continue
 
             if not token_decimals:
-                log.error(f"No token_decimals for {token['slug']}")
+                log.warning(f"No token_decimals for {token['slug']}")
                 continue
 
             supply = get_total_supply(token_address, block_number, token_decimals, optimism_rpc_url)

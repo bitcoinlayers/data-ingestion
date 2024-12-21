@@ -46,13 +46,13 @@ def lambda_handler(event, context):
         try:
             token_address = token.get('address')
             if not token_address:
-                log.error(f"No token_address for {token['slug']}")
+                log.warning(f"No token_address for {token['slug']}")
                 continue
 
             supply = fetch_ckbtc_total_supply(ic_rpc_url)
 
             if not supply:
-                log.error(f"Error fetching total supply for {token['slug']}")
+                log.warning(f"Error fetching total supply for {token['slug']}")
                 continue
 
             log.info(f"{token['slug']} Total Supply: {supply} tokens")
