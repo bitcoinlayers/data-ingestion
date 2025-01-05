@@ -9,7 +9,7 @@ import helpers
 log = logging.getLogger()
 log.setLevel(logging.INFO)
 
-network_slug = 'BsquaredNetwork'
+network_slug = 'Bsquared'
 
 # Load totalSupply function selector
 total_supply_function_data = Web3.keccak(text="totalSupply()")[:4].hex()
@@ -69,7 +69,7 @@ def get_total_supply(token_address, block_identifier, decimals, bsquared_rpc_url
 def lambda_handler(event, context):
     api_secret = helpers.get_api_secret()
     db_secret = helpers.get_db_secret()
-    bsquared_rpc_url = f"https://rpc.ankr.com/b2/{api_secret.get('API_KEY_ANKR')}"
+    bsquared_rpc_url = api_secret.get('RPC_BSQUARED')
 
     network_config = helpers.get_network_config(network_slug, db_secret)
     tokens = network_config.get('network_tokens')
