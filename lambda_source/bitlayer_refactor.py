@@ -52,9 +52,8 @@ def get_total_supply_at_block(block_number, token_address, token_decimals):
 
 # Lambda handler function
 def lambda_handler(event, context):
-    api_secret = helpers.get_api_secret()
+    # api_secret = helpers.get_api_secret()
     db_secret = helpers.get_db_secret()
-    eth_rpc_url = f"https://arb-mainnet.g.alchemy.com/v2/{api_secret.get('API_KEY_ALCHEMY')}"
 
     network_config = helpers.get_network_config(network_slug, db_secret)
     tokens = network_config.get('network_tokens')

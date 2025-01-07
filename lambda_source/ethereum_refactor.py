@@ -69,7 +69,7 @@ def get_total_supply(token_address, block_identifier, decimals, eth_rpc_url):
 def lambda_handler(event, context):
     api_secret = helpers.get_api_secret()
     db_secret = helpers.get_db_secret()
-    eth_rpc_url = f"https://eth-mainnet.g.alchemy.com/v2/{api_secret.get('API_KEY_ALCHEMY')}"
+    eth_rpc_url = api_secret.get('RPC_ETHEREUM')
 
     network_config = helpers.get_network_config(network_slug, db_secret)
     tokens = network_config.get('network_tokens')

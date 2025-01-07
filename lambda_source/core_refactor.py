@@ -60,7 +60,7 @@ def lambda_handler(event, context):
     db_secret = helpers.get_db_secret()
     api_key = api_secret.get('API_KEY_ANKR')
     api_key_alt = api_secret.get('API_KEY_CORE')
-    core_rpc_url = f"https://rpc.ankr.com/core/{api_key}"
+    core_rpc_url = api_secret.get('RPC_CORE')
 
     network_config = helpers.get_network_config(network_slug, db_secret)
     tokens = network_config.get('network_tokens')
