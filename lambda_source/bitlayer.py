@@ -12,8 +12,6 @@ log.setLevel(logging.INFO)
 
 network_slug = 'Bitlayer'
 
-bitlayer_rpc_url = "https://rpc.bitlayer.org"
-
 # Hardcoded ABI for the token contracts
 token_abi = [
     {"inputs": [], "name": "totalSupply", "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}], "stateMutability": "view", "type": "function"}
@@ -40,7 +38,7 @@ def get_block_by_timestamp(timestamp):
         return None
 
 # Function to call totalSupply() at a specific block
-def get_total_supply_at_block(block_number, token_address, token_decimals):
+def get_total_supply_at_block(block_number, token_address, token_decimals, bitlayer_rpc_url):
     try:
         web3 = Web3(Web3.HTTPProvider(bitlayer_rpc_url))
         contract = web3.eth.contract(address=Web3.to_checksum_address(token_address), abi=token_abi)
@@ -52,8 +50,11 @@ def get_total_supply_at_block(block_number, token_address, token_decimals):
 
 # Lambda handler function
 def lambda_handler(event, context):
-    # api_secret = helpers.get_api_secret()
+    invocation_type = event.get('invocation_type', 'incremental')
+
+    api_secret = helpers.get_api_secret()
     db_secret = helpers.get_db_secret()
+    bitlayer_rpc_url = api_secret.get('RPC_BITLAYER')
 
     network_config = helpers.get_network_config(network_slug, db_secret)
     tokens = network_config.get('network_tokens')
@@ -61,14 +62,20 @@ def lambda_handler(event, context):
 
     current_date = datetime.now(timezone.utc)
 
-    # Get the previous day's midnight UTC timestamp
-    previous_day = current_date - timedelta(days=1)
-    previous_day_timestamp = int(time.mktime(previous_day.replace(hour=0, minute=0, second=0, microsecond=0).timetuple()))
+    # Incremental invocations -- run every 4 hours, update current date balance
+    if invocation_type == 'incremental':
+        day = current_date
+        timestamp = int(time.mktime(day.replace(hour=0, minute=0, second=0, microsecond=0).timetuple()))
 
-    block_number = get_block_by_timestamp(previous_day_timestamp)
+    # Final invocations -- run at 00:15:00 UTC, update previous date balance
+    else: 
+        day = current_date - timedelta(days=1)
+        timestamp = int(time.mktime(day.replace(hour=0, minute=0, second=0, microsecond=0).timetuple()))
+
+    block_number = get_block_by_timestamp(timestamp)
 
     if not block_number:
-        log.error(f"Could not fetch block for {previous_day}")
+        log.error(f"Could not fetch block for {day}")
         return
 
     token_values = {}
@@ -86,7 +93,7 @@ def lambda_handler(event, context):
                 log.warning(f"No token_decimals for {token['slug']}")
                 continue
 
-            supply = get_total_supply_at_block(block_number, token_address, token_decimals)
+            supply = get_total_supply_at_block(block_number, token_address, token_decimals, bitlayer_rpc_url)
 
             if not supply:
                 log.error(f"Error fetching total supply for {token['slug']}")
@@ -164,7 +171,7 @@ def lambda_handler(event, context):
                     """
                     cursor.execute(insert_query, (
                         token_slug,
-                        previous_day.strftime('%Y-%m-%d'),
+                        day.strftime('%Y-%m-%d'),
                         supply
                     ))
                     conn.commit()
@@ -179,7 +186,7 @@ def lambda_handler(event, context):
                 #     """
                 #     cursor.execute(insert_query, (
                 #         reserve_slug,
-                #         yesterday,
+                #         day,
                 #         supply
                 #     ))
                 #     conn.commit()

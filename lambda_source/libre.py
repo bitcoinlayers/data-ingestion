@@ -45,6 +45,8 @@ def fetch_total_supply(url, token_name):
 
 # Lambda handler function
 def lambda_handler(event, context):
+    invocation_type = event.get('invocation_type', 'incremental')
+
     api_secret = helpers.get_api_secret()
     db_secret = helpers.get_db_secret()
     libre_rpc_url = api_secret.get('RPC_LIBRE')
@@ -53,8 +55,13 @@ def lambda_handler(event, context):
     tokens = network_config.get('network_tokens')
     reserves = network_config.get('network_reserves')
 
-    # Fetch yesterday's date
-    yesterday = datetime.now(timezone.utc).date() - timedelta(days=1)
+    # Incremental invocations -- run every 4 hours, update current date balance
+    if invocation_type == 'incremental':
+        day = datetime.now(timezone.utc).date()
+
+    # Final invocations -- run at 00:15:00 UTC, update previous date balance
+    else:
+        day = datetime.now(timezone.utc).date() - timedelta(days=1)
 
     token_values = {}
     reserve_values = {}
@@ -141,7 +148,7 @@ def lambda_handler(event, context):
                     """
                     cursor.execute(insert_query, (
                         token_slug,
-                        yesterday,
+                        day,
                         supply
                     ))
                     conn.commit()
@@ -156,7 +163,7 @@ def lambda_handler(event, context):
                 #     """
                 #     cursor.execute(insert_query, (
                 #         reserve_slug,
-                #         yesterday,
+                #         day,
                 #         supply
                 #     ))
                 #     conn.commit()

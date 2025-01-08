@@ -48,18 +48,24 @@ def get_circulating_rbtc(token_address, rpc_url):
 
 # Lambda handler function
 def lambda_handler(event, context):
-    """Fetch token and reserve balances for Rootstock."""
-    # Load secrets and configuration
+    invocation_type = event.get('invocation_type', 'incremental')
+
     api_secret = helpers.get_api_secret()
     db_secret = helpers.get_db_secret()
     rpc_url = api_secret.get('RPC_ROOTSTOCK')
 
     network_config = helpers.get_network_config(network_slug, db_secret)
     tokens = network_config.get('network_tokens')
-    reserves = network_config.get('network_reserves')
+    # reserves = network_config.get('network_reserves')
 
-    # Calculate the date for yesterday
-    query_date = datetime.now(timezone.utc).date() - timedelta(days=1)
+    # Incremental invocations -- run every 4 hours, update current date balance
+    if invocation_type == 'incremental':
+        day = datetime.now(timezone.utc).date()
+
+    # Final invocations -- run at 00:15:00 UTC, update previous date balance
+    else:
+        day = datetime.now(timezone.utc).date() - timedelta(days=1)
+
 
     # Connect to database
     conn = psycopg2.connect(
@@ -100,47 +106,11 @@ def lambda_handler(event, context):
                     VALUES (%s, %s, %s)
                     ON CONFLICT (token_implementation, date)
                     DO UPDATE SET balance = EXCLUDED.balance
-                """, (token['slug'], query_date, supply))
+                """, (token['slug'], day, supply))
 
             except Exception as e:
                 log.error(f"Error processing {token['slug']}: {e}")
 
-        # Process reserves
-        for reserve in reserves:
-            try:
-                reserve_address = reserve.get('address')
-                collateral = reserve.get('collateral_token')
-
-                if not Web3.is_address(reserve_address):
-                    log.error(f"Invalid reserve address for {reserve['slug']}")
-                    continue
-
-                if not collateral or not Web3.is_address(collateral['address']):
-                    log.error(f"Invalid collateral address for {reserve['slug']}")
-                    continue
-
-                # Fetch balance of reserve's collateral token
-                decimals = int(collateral.get('decimals', 18))
-                balance = fetch_balance(reserve_address, rpc_url, decimals)
-
-                if balance is None:
-                    log.error(f"Failed to fetch reserve balance for {reserve['slug']}")
-                    continue
-
-                log.info(f"{reserve['slug']} Reserve Balance: {balance}")
-
-                # Insert reserve balance into database
-                cursor.execute("""
-                    INSERT INTO reserve_balances (date, reserve_network, collateral_token, derivative_token, balance)
-                    VALUES (%s, %s, %s, %s, %s)
-                    ON CONFLICT (date, reserve_network, collateral_token, derivative_token)
-                    DO UPDATE SET balance = EXCLUDED.balance
-                """, (query_date, network_slug, collateral['address'], reserve['slug'], balance))
-
-            except Exception as e:
-                log.error(f"[RESERVE] Error processing {reserve['slug']}: {e}")
-
-        # Commit all inserts
         conn.commit()
 
     except Exception as e:

@@ -67,21 +67,31 @@ def get_total_supply(token_address, block_identifier, decimals, eth_rpc_url):
 
 # Lambda handler function
 def lambda_handler(event, context):
-    # api_secret = helpers.get_api_secret()
+    invocation_type = event.get('invocation_type', 'incremental')
+
+    api_secret = helpers.get_api_secret()
     db_secret = helpers.get_db_secret()
-    eth_rpc_url = "https://maizenet-rpc.usecorn.com/"
+    eth_rpc_url = api_secret.get('RPC_CORN')
 
     network_config = helpers.get_network_config(network_slug, db_secret)
     tokens = network_config.get('network_tokens')
     reserves = network_config.get('network_reserves')
 
-    # Fetch yesterday's date
-    yesterday = datetime.now(timezone.utc).date() - timedelta(days=1)
-    end_timestamp = int(datetime.combine(yesterday, datetime.max.time(), tzinfo=timezone.utc).timestamp())  # 23:59:59 UTC
-    block_number = get_block_by_timestamp(end_timestamp, eth_rpc_url)
+    # Incremental invocations -- run every 4 hours, update current date balance
+    if invocation_type == 'incremental':
+        day = datetime.now(timezone.utc).date()
+        timestamp = int(datetime.now(timezone.utc).timestamp())
+
+    # Final invocations -- run at 00:15:00 UTC, update previous date balance
+    else:
+        day = datetime.now(timezone.utc).date() - timedelta(days=1)
+        timestamp = int(datetime.combine(day, datetime.max.time(), tzinfo=timezone.utc).timestamp())  # 23:59:59 UTC
+
+    
+    block_number = get_block_by_timestamp(timestamp, eth_rpc_url)
 
     if not block_number:
-        log.error(f"Could not fetch block for {yesterday}")
+        log.error(f"Could not fetch block for {day}")
         return
 
     token_values = {}
@@ -177,7 +187,7 @@ def lambda_handler(event, context):
                     """
                     cursor.execute(insert_query, (
                         token_slug,
-                        yesterday,
+                        day,
                         supply
                     ))
                     conn.commit()
@@ -192,7 +202,7 @@ def lambda_handler(event, context):
                 #     """
                 #     cursor.execute(insert_query, (
                 #         reserve_slug,
-                #         yesterday,
+                #         day,
                 #         supply
                 #     ))
                 #     conn.commit()

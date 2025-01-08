@@ -37,7 +37,8 @@ def get_total_supply(token_address, solana_rpc_url):
 
 # Lambda handler function
 def lambda_handler(event, context):
-    # Load secrets and configurations
+    invocation_type = event.get('invocation_type', 'incremental')
+
     api_secret = helpers.get_api_secret()
     db_secret = helpers.get_db_secret()
     solana_rpc_url = api_secret.get('RPC_SOLANA')
@@ -46,8 +47,13 @@ def lambda_handler(event, context):
     network_config = helpers.get_network_config(network_slug, db_secret)
     tokens = network_config.get('network_tokens')
 
-    # Fetch yesterday's date
-    yesterday = datetime.now(timezone.utc).date() - timedelta(days=1)
+    # Incremental invocations -- run every 4 hours, update current date balance
+    if invocation_type == 'incremental':
+        day = datetime.now(timezone.utc).date()
+
+    # Final invocations -- run at 00:15:00 UTC, update previous date balance
+    else:
+        day = datetime.now(timezone.utc).date() - timedelta(days=1)
 
     # Establish DB connection
     conn = psycopg2.connect(
@@ -89,7 +95,7 @@ def lambda_handler(event, context):
                     ON CONFLICT (token_implementation, date)
                     DO UPDATE SET balance = EXCLUDED.balance
                     """
-                    cursor.execute(insert_query, (token_slug, yesterday, supply))
+                    cursor.execute(insert_query, (token_slug, day, supply))
                     conn.commit()
 
     except psycopg2.Error as e:

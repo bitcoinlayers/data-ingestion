@@ -11,13 +11,11 @@ log.setLevel(logging.INFO)
 
 network_slug = 'BOB'
 
-bob_rpc_api_url = "https://rpc.gobob.xyz/"
-
 # ERC20 ABI for totalSupply and decimals functions
 total_supply_function_data = Web3.keccak(text="totalSupply()")[:4].hex()
 
 # Get block number based on timestamp using binary search
-def get_block_by_timestamp(timestamp):
+def get_block_by_timestamp(timestamp, bob_rpc_api_url):
     lower_bound = 0
     upper_bound = int(requests.post(bob_rpc_api_url, json={
         "jsonrpc": "2.0",
@@ -47,7 +45,7 @@ def get_block_by_timestamp(timestamp):
     return upper_bound
 
 # Fetch total supply for a given token at a specific block
-def get_total_supply(token_address, block_identifier, decimals):
+def get_total_supply(token_address, block_identifier, decimals, bob_rpc_api_url):
     log.info(f"Fetching total supply for token: {token_address} at block: {block_identifier}")
 
     response = requests.post(bob_rpc_api_url, json={
@@ -69,20 +67,30 @@ def get_total_supply(token_address, block_identifier, decimals):
 
 # Lambda handler function
 def lambda_handler(event, context):
-    # api_secret = helpers.get_api_secret()
+    invocation_type = event.get('invocation_type', 'incremental')
+
+    api_secret = helpers.get_api_secret()
     db_secret = helpers.get_db_secret()
+    bob_rpc_api_url = api_secret.get('RPC_BOB')
 
     network_config = helpers.get_network_config(network_slug, db_secret)
     tokens = network_config.get('network_tokens')
     reserves = network_config.get('network_reserves')
 
-    # Fetch yesterday's date
-    yesterday = datetime.now(timezone.utc).date() - timedelta(days=1)
-    end_timestamp = int(datetime.combine(yesterday, datetime.max.time(), tzinfo=timezone.utc).timestamp())
-    block_number = get_block_by_timestamp(end_timestamp)
+    # Incremental invocations -- run every 4 hours, update current date balance
+    if invocation_type == 'incremental':
+        day = datetime.now(timezone.utc).date()
+        timestamp = int(datetime.now(timezone.utc).timestamp())
+
+    # Final invocations -- run at 00:15:00 UTC, update previous date balance
+    else:
+        day = datetime.now(timezone.utc).date() - timedelta(days=1)
+        timestamp = int(datetime.combine(day, datetime.max.time(), tzinfo=timezone.utc).timestamp())  # 23:59:59 UTC
+
+    block_number = get_block_by_timestamp(timestamp, bob_rpc_api_url)
 
     if not block_number:
-        log.error(f"Could not fetch block for {yesterday}")
+        log.error(f"Could not fetch block for {day}")
         return
 
     token_values = {}
@@ -100,7 +108,7 @@ def lambda_handler(event, context):
                 log.warning(f"No token_decimals for {token['slug']}")
                 continue
 
-            supply = get_total_supply(token_address, block_number, token_decimals)
+            supply = get_total_supply(token_address, block_number, token_decimals, bob_rpc_api_url)
 
             if not supply:
                 log.error(f"Error fetching total supply for {token['slug']}")
@@ -178,7 +186,7 @@ def lambda_handler(event, context):
                     """
                     cursor.execute(insert_query, (
                         token_slug,
-                        yesterday,
+                        day,
                         supply
                     ))
                     conn.commit()
@@ -193,7 +201,7 @@ def lambda_handler(event, context):
                 #     """
                 #     cursor.execute(insert_query, (
                 #         reserve_slug,
-                #         yesterday,
+                #         day,
                 #         supply
                 #     ))
                 #     conn.commit()
