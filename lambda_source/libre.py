@@ -73,7 +73,7 @@ def lambda_handler(event, context):
             supply = fetch_total_supply(libre_rpc_url, token_name)
 
             if not supply:
-                log.error(f"Error fetching total supply for {token['slug']}")
+                log.warning(f"Error fetching total supply for {token['slug']}")
                 continue
 
             log.info(f"{token['slug']} Total Supply: {supply} tokens")
