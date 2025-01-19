@@ -162,9 +162,8 @@ def lambda_handler(event, context):
                 log.warning(f"Error fetching total supply for {reserve_slug}")
                 continue
 
-            reserve_values[reserve_slug] = {
+            reserve_values[reserve_implementation_id] = {
                 'balance': supply,
-                'id': reserve_implementation_id,
                 'reserve_network': network_slug,
                 'collateral_token': collateral_token.get('slug'),
                 'derivative_token': derivative_token.get('slug'),
@@ -200,7 +199,7 @@ def lambda_handler(event, context):
                     ))
                     conn.commit()
 
-                for reserve_slug, balance_data in reserve_values.items():
+                for reserve_implementation_id, balance_data in reserve_values.items():
                     insert_query = """
                     INSERT INTO reserve_balances (
                         date, 
@@ -224,7 +223,7 @@ def lambda_handler(event, context):
                     cursor.execute(insert_query, (
                         day,
                         balance_data['balance'],
-                        balance_data['id'],
+                        reserve_implementation_id,
                         balance_data['reserve_network'],
                         balance_data['collateral_token'],
                         balance_data['derivative_token'],
