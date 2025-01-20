@@ -4,12 +4,14 @@ from web3 import Web3
 import psycopg2
 import requests
 import helpers
+from alchemy import Alchemy, Network
 
 # Setup logging
 log = logging.getLogger()
 log.setLevel(logging.INFO)
 
 network_slug = 'Gnosis'
+alchemy_network = Network.GNOSIS_MAINNET
 
 # Load totalSupply function selector
 total_supply_function_data = Web3.keccak(text="totalSupply()")[:4].hex()

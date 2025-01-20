@@ -4,12 +4,14 @@ from web3 import Web3
 import psycopg2
 import requests
 import helpers
+from alchemy import Alchemy, Network
 
 # Setup logging
 log = logging.getLogger()
 log.setLevel(logging.INFO)
 
 network_slug = 'Solana'
+alchemy_network = Network.SOLANA_MAINNET
 
 # Fetch total supply for a given token
 def get_total_supply(token_address, solana_rpc_url):
