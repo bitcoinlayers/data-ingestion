@@ -34,14 +34,19 @@ By network (e.g., Ethereum):
 `https://api.btc-locked.com/current_supplies_by_network`
 
 Note that these supplies are adjusted for bridging. For example, the ~10k wBTC bridged from Ethereum to Arbitrum will count for
+
 tokenimpl == BitGo-wBTC_Arbitrum
+
 network == Arbitrum
 
 it will not count for
+
 tokenimpl == BitGo-wBTC_Ethereum
+
 network == Ethereum
 
 this avoids double counting on
+
 tokenproject == BitGo-wBTC
 
 ### Reserves
