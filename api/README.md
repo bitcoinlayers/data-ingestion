@@ -1,5 +1,11 @@
 # API Endpoints
 
+Here are the API endpoints for
+- top gainers i.e., fastest growing tokens
+- current supplies i.e., latest BTC supply value
+- historical supplies i.e., BTC supplies over time
+- reserves i.e., reserves balances for wrapped BTC assets
+
 ## Top Gainers
 
 Percent Growth:
