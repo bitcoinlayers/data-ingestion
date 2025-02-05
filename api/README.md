@@ -94,7 +94,7 @@ this avoids double counting on
 
 tokenproject == BitGo-wBTC
 
-### Reserves
+## Reserves
 
 WORK IN PROGRESS
 
