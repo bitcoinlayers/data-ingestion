@@ -11,7 +11,7 @@ log = logging.getLogger()
 log.setLevel(logging.INFO)
 
 network_slug = 'Sonic'
-alchemy_network = Network.SONIC_MAINNET
+# alchemy_network = Network.SONIC_MAINNET
 
 # Load totalSupply function selector
 total_supply_function_data = Web3.keccak(text="totalSupply()")[:4].hex()
@@ -84,12 +84,12 @@ def lambda_handler(event, context):
     db_secret = helpers.get_db_secret()
     eth_rpc_url = api_secret.get('RPC_SONIC')
 
-    api_key = api_secret.get('API_KEY_ALCHEMY')
-    alchemy = Alchemy(api_key, alchemy_network, max_retries=3) 
+    # api_key = api_secret.get('API_KEY_ALCHEMY')
+    # alchemy = Alchemy(api_key, alchemy_network, max_retries=3) 
 
     network_config = helpers.get_network_config(network_slug, db_secret)
     tokens = network_config.get('network_tokens')
-    reserves = network_config.get('network_reserves')
+    # reserves = network_config.get('network_reserves')
 
 
     # Incremental invocations -- run every 4 hours, update current date balance
@@ -110,7 +110,7 @@ def lambda_handler(event, context):
         return
 
     token_values = {}
-    reserve_values = {}
+    # reserve_values = {}
 
     for token in tokens:
         try:
@@ -135,45 +135,45 @@ def lambda_handler(event, context):
         except Exception as e:
             log.error(f"Error fetching total supply for {token['slug']}: {e}")
 
-    for reserve in reserves:
-        try:
-            reserve_address = reserve.get('address')
-            reserve_slug = reserve.get('slug')
-            reserve_implementation_id = reserve.get('id')
-            collateral_token = reserve.get('collateral_token')
-            derivative_token = reserve.get('derivative_token')
+    # for reserve in reserves:
+    #     try:
+    #         reserve_address = reserve.get('address')
+    #         reserve_slug = reserve.get('slug')
+    #         reserve_implementation_id = reserve.get('id')
+    #         collateral_token = reserve.get('collateral_token')
+    #         derivative_token = reserve.get('derivative_token')
 
-            if not collateral_token:
-                log.warning(f"No collateral_token for reserve: {reserve_slug}")
-                continue
+    #         if not collateral_token:
+    #             log.warning(f"No collateral_token for reserve: {reserve_slug}")
+    #             continue
             
-            collateral_token_address = collateral_token.get('address')
-            collateral_token_decimals = collateral_token.get('decimals')
+    #         collateral_token_address = collateral_token.get('address')
+    #         collateral_token_decimals = collateral_token.get('decimals')
 
-            if not collateral_token_address:
-                log.warning(f"No collateral_token_address for {reserve_slug}")
-                continue
+    #         if not collateral_token_address:
+    #             log.warning(f"No collateral_token_address for {reserve_slug}")
+    #             continue
 
-            if not collateral_token_decimals:
-                log.warning(f"No collateral_token_decimals for {reserve_slug}")
-                continue
+    #         if not collateral_token_decimals:
+    #             log.warning(f"No collateral_token_decimals for {reserve_slug}")
+    #             continue
 
-            supply = get_reserve_supply(alchemy, reserve_slug, reserve_address, collateral_token_address, collateral_token_decimals)
+    #         supply = get_reserve_supply(alchemy, reserve_slug, reserve_address, collateral_token_address, collateral_token_decimals)
 
-            if not supply:
-                log.warning(f"Error fetching total supply for {reserve_slug}")
-                continue
+    #         if not supply:
+    #             log.warning(f"Error fetching total supply for {reserve_slug}")
+    #             continue
 
-            reserve_values[reserve_implementation_id] = {
-                'balance': supply,
-                'reserve_network': network_slug,
-                'collateral_token': collateral_token.get('slug'),
-                'derivative_token': derivative_token.get('slug'),
-                'reserve_address': reserve_address,
-            }
+    #         reserve_values[reserve_implementation_id] = {
+    #             'balance': supply,
+    #             'reserve_network': network_slug,
+    #             'collateral_token': collateral_token.get('slug'),
+    #             'derivative_token': derivative_token.get('slug'),
+    #             'reserve_address': reserve_address,
+    #         }
 
-        except Exception as e:
-            log.error(f"[RESERVE] Error fetching total supply for {reserve['slug']}: {e}")
+    #     except Exception as e:
+    #         log.error(f"[RESERVE] Error fetching total supply for {reserve['slug']}: {e}")
 
     # Insert total supply values into database
     conn = psycopg2.connect(
@@ -201,37 +201,37 @@ def lambda_handler(event, context):
                     ))
                     conn.commit()
 
-                for reserve_implementation_id, balance_data in reserve_values.items():
-                    insert_query = """
-                    INSERT INTO reserve_balances (
-                        date, 
-                        balance, 
-                        reserve_implementation_id, 
-                        reserve_network, 
-                        collateral_token, 
-                        derivative_token, 
-                        reserve_address
-                    )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (
-                        date, 
-                        reserve_network, 
-                        reserve_address, 
-                        collateral_token, 
-                        derivative_token
-                    )
-                    DO UPDATE SET balance = EXCLUDED.balance
-                    """
-                    cursor.execute(insert_query, (
-                        day,
-                        balance_data['balance'],
-                        reserve_implementation_id,
-                        balance_data['reserve_network'],
-                        balance_data['collateral_token'],
-                        balance_data['derivative_token'],
-                        balance_data['reserve_address']
-                    ))
-                    conn.commit()
+                # for reserve_implementation_id, balance_data in reserve_values.items():
+                #     insert_query = """
+                #     INSERT INTO reserve_balances (
+                #         date, 
+                #         balance, 
+                #         reserve_implementation_id, 
+                #         reserve_network, 
+                #         collateral_token, 
+                #         derivative_token, 
+                #         reserve_address
+                #     )
+                #     VALUES (%s, %s, %s, %s, %s, %s, %s)
+                #     ON CONFLICT (
+                #         date, 
+                #         reserve_network, 
+                #         reserve_address, 
+                #         collateral_token, 
+                #         derivative_token
+                #     )
+                #     DO UPDATE SET balance = EXCLUDED.balance
+                #     """
+                #     cursor.execute(insert_query, (
+                #         day,
+                #         balance_data['balance'],
+                #         reserve_implementation_id,
+                #         balance_data['reserve_network'],
+                #         balance_data['collateral_token'],
+                #         balance_data['derivative_token'],
+                #         balance_data['reserve_address']
+                #     ))
+                #     conn.commit()
     except psycopg2.Error as e:
         log.error(f"Error connecting to DB: {e}")
 
