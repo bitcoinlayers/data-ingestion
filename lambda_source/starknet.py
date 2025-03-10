@@ -12,7 +12,7 @@ log.setLevel(logging.INFO)
 network_slug = 'Starknet'
 
 # `totalSupply` function selectors
-TOTAL_SUPPLY_SELECTOR = "0x1557182e4359a1f0c6301278e8f5b35a776ab58d39892581e357578fb287836"
+TOTAL_SUPPLY_SELECTOR = "0x1557182e4359a1f0c6301278e8f5b35a776ab58d39892581e357578fb287836" # for wBTC
 
 # Format Starknet contract address correctly (64 hex characters)
 def format_starknet_address(address):
