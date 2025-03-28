@@ -1,21 +1,17 @@
 import logging
 import psycopg2
 import requests
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import helpers
 
 log = logging.getLogger()
 log.setLevel(logging.INFO)
 
-api_secret = helpers.get_api_secret()
-db_secret = helpers.get_db_secret()
-
-TRONSCAN_API_KEY = api_secret.get('RPC_TRON_2')
 TRONSCAN_BASE_URL = "https://apilist.tronscanapi.com/api"
 
-def get_total_supply(token_address):
+def get_total_supply(token_address, api_key):
     url = f"{TRONSCAN_BASE_URL}/token_trc20/totalSupply?address={token_address}"
-    headers = {"TRON-PRO-API-KEY": TRONSCAN_API_KEY}
+    headers = {"TRON-PRO-API-KEY": api_key}
 
     try:
         response = requests.get(url, headers=headers)
@@ -39,12 +35,19 @@ def get_total_supply(token_address):
         log.error(f"Unexpected error for {token_address}: {e}")
         return None
 
-def fetch_tron_current_data():
+def fetch_tron_current_data(api_secret, db_secret, invocation_type="incremental"):
     log.info("Fetching current total supply for Tron tokens...")
 
-    now = datetime.now(timezone.utc).date()
+    utc_now = datetime.now(timezone.utc)
+    if invocation_type == "final":
+        now = utc_now.date() - timedelta(days=1)
+    else:
+        now = utc_now.date()
 
-    db_secret = helpers.get_db_secret()  # Ensure fresh connection secrets
+    log.info(f"UTC now: {utc_now.isoformat()} — inserting for: {now.isoformat()}")
+
+    tron_api_key = api_secret.get('RPC_TRON_2')
+
     with psycopg2.connect(
         host=db_secret.get('host'),
         database=db_secret.get('dbname'),
@@ -58,7 +61,7 @@ def fetch_tron_current_data():
 
             for slug, token_address in tokens:
                 try:
-                    supply = get_total_supply(token_address)
+                    supply = get_total_supply(token_address, tron_api_key)
                     if supply is not None:
                         log.info(f"{slug} Total Supply: {supply}")
                         cursor.execute("""
@@ -74,11 +77,18 @@ def fetch_tron_current_data():
 
             conn.commit()
 
-    log.info("Supply data updated successfully.")
+    log.info("✅ Tron supply data updated successfully.")
 
 def lambda_handler(event, context):
-    fetch_tron_current_data()
+    log.info("🚀 Tron Lambda execution started.")
+    api_secret = helpers.get_api_secret()
+    db_secret = helpers.get_db_secret()
+    invocation_type = event.get("invocation_type", "incremental")
+    fetch_tron_current_data(api_secret, db_secret, invocation_type=invocation_type)
+    log.info("✅ Tron Lambda execution completed.")
     return {"status": "success"}
 
 if __name__ == "__main__":
-    fetch_tron_current_data()
+    api_secret = helpers.get_api_secret()
+    db_secret = helpers.get_db_secret()
+    fetch_tron_current_data(api_secret, db_secret, invocation_type="incremental")
