@@ -8,10 +8,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-RPC_USER = os.getenv('RPC_USER_LOCAL')
-RPC_PASS = os.getenv('RPC_PASS_LOCAL')
-RPC_HOST = os.getenv('RPC_HOST_LOCAL')
-RPC_PORT = os.getenv('RPC_PORT_LOCAL')
+RPC_USER = os.getenv('RPC_USER')
+RPC_PASS = os.getenv('RPC_PASS')
+RPC_HOST = os.getenv('RPC_HOST')
+RPC_PORT = os.getenv('RPC_PORT')
 
 session = requests.Session()
 session.headers.update({'content-type': 'application/json'})
