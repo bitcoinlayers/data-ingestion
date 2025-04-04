@@ -86,7 +86,7 @@ def parse_restaking_txs_to_csv(start_block, stop_block, version_prefix="6a476262
                 writer.writerows(buffer)
             buffer.clear()
 
-        with open("last_block_checked.txt", "w") as f:
+        with open(os.path.join(os.path.dirname(__file__), "last_block_checked.txt"), "w") as f:
             f.write(str(current_block))
 
         pbar.update(1)
@@ -101,7 +101,7 @@ def parse_restaking_txs_to_csv(start_block, stop_block, version_prefix="6a476262
     print(f"Finished scanning up to block {stop_block}. Output written to {output_file}")
 
 if __name__ == "__main__":
-    CONFIG_START_BLOCK = 857910 # before Babylon Phase 1 began
+    CONFIG_START_BLOCK = 857910  # before Babylon Phase 1 began
 
     blockchain_info = bitcoin_rpc("getblockchaininfo")
     if not blockchain_info or "result" not in blockchain_info:
@@ -114,4 +114,6 @@ if __name__ == "__main__":
     START_BLOCK = max(CONFIG_START_BLOCK, PRUNE_HEIGHT + 1)
     STOP_BLOCK = CURRENT_BLOCK
 
-    parse_restaking_txs_to_csv(start_block=START_BLOCK, stop_block=STOP_BLOCK)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    output_file = os.path.join(script_dir, "babylon_staking_txs.csv")
+    parse_restaking_txs_to_csv(start_block=START_BLOCK, stop_block=STOP_BLOCK, output_file=output_file)
