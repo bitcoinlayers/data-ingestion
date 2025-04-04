@@ -40,10 +40,13 @@ def bitcoin_rpc(method, params=None):
 def parse_restaking_txs_to_csv(start_block, stop_block, version_prefix="6a4762626e31", output_file="babylon_staking_txs.csv"):
     print(f"Scanning from block {start_block} to block {stop_block}")
 
-    with open(output_file, mode='w', newline='') as csvfile:
-        fieldnames = ["block_height", "block_hash", "txid", "value", "script_hex", "timestamp"]
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
+    fieldnames = ["block_height", "block_hash", "txid", "value", "script_hex", "timestamp"]
+    file_exists = os.path.exists(output_file)
+
+    if not file_exists:
+        with open(output_file, mode='w', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
 
     pbar = tqdm(total=(stop_block - start_block + 1), desc="Scanning blocks", unit="block")
     buffer = []
@@ -111,9 +114,19 @@ if __name__ == "__main__":
     CURRENT_BLOCK = info["blocks"]
     PRUNE_HEIGHT = info.get("pruneheight", 0)
 
-    START_BLOCK = max(CONFIG_START_BLOCK, PRUNE_HEIGHT + 1)
-    STOP_BLOCK = CURRENT_BLOCK
-
     script_dir = os.path.dirname(os.path.abspath(__file__))
+
+    last_block_file = os.path.join(script_dir, "last_block_checked.txt")
+    if os.path.exists(last_block_file):
+        with open(last_block_file, "r") as f:
+            last_checked = int(f.read().strip())
+            START_BLOCK = last_checked + 1
+            print(f"📌 Resuming from block {START_BLOCK} (after last checked)")
+    else:
+        START_BLOCK = max(CONFIG_START_BLOCK, PRUNE_HEIGHT + 1)
+        print(f"📌 Starting fresh from block {START_BLOCK}")
+
+    STOP_BLOCK = CURRENT_BLOCK
     output_file = os.path.join(script_dir, "babylon_staking_txs.csv")
+
     parse_restaking_txs_to_csv(start_block=START_BLOCK, stop_block=STOP_BLOCK, output_file=output_file)
